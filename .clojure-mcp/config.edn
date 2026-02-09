@@ -1,0 +1,7 @@
+{:allowed-directories ["."
+                       "src"
+                       "test"
+                       "resources"]
+ :write-file-guard :partial-read
+ :cljfmt false
+ :bash-over-nrepl false}

@@ -1,0 +1,58 @@
+/* Clara Rules Inspector - styles */
+.root {
+  -fx-font-family: "Segoe UI", "Ubuntu", sans-serif;
+  -fx-font-size: 13px;
+  -fx-base: #f5f5f5;
+  -fx-background: #fafafa;
+}
+
+.text-area {
+  -fx-font-family: "Consolas", "Monaco", "DejaVu Sans Mono", monospace;
+  -fx-font-size: 12px;
+  -fx-padding: 6;
+  -fx-background-radius: 4;
+}
+
+.text-area:disabled {
+  -fx-opacity: 1;
+  -fx-text-fill: #333;
+}
+
+.label {
+  -fx-padding: 2 0;
+}
+
+.button {
+  -fx-padding: 6 14;
+  -fx-background-radius: 4;
+  -fx-cursor: hand;
+}
+
+.button:hover {
+  -fx-opacity: 0.9;
+}
+
+.button:disabled {
+  -fx-opacity: 0.6;
+}
+
+.tab-pane {
+  -fx-padding: 5;
+}
+
+.tab-pane > .tab-header-area {
+  -fx-padding: 0 5 0 0;
+}
+
+.scroll-pane {
+  -fx-background-color: transparent;
+  -fx-fit-to-width: true;
+}
+
+.v-box {
+  -fx-spacing: 6;
+}
+
+.h-box {
+  -fx-spacing: 8;
+}

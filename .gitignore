@@ -1,0 +1,12 @@
+# Build
+target/
+dist/
+
+# IDE / tools
+.idea/
+*.iml
+.clj-kondo/
+.cpcache/
+.lsp/
+
+log/
