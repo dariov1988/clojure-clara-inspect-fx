@@ -12,10 +12,11 @@ APP_NAME="Clara-Inspect-Fx"
 
 cd "$PROJECT_ROOT"
 
-echo "== Building uberjar =="
-clj -T:build uber
-
 JAR_PATH="$PROJECT_ROOT/target/$JAR_NAME"
+if [ ! -f "$JAR_PATH" ]; then
+  echo "== Building uberjar =="
+  clojure -T:build uber
+fi
 test -f "$JAR_PATH" || { echo "Uberjar not found: $JAR_PATH"; exit 1; }
 
 echo "== Packaging Windows app-image (jpackage) =="
@@ -28,7 +29,7 @@ jpackage --type app-image \
   --main-jar "$JAR_NAME" \
   --main-class clara_inspect_fx.main \
   --dest "$DIST_DIR" \
-  --app-version 0.1.0
+  --app-version 1.0.0
 
 echo "== Windows app-image ready at $DIST_DIR/$APP_NAME =="
 echo "Run: $DIST_DIR/$APP_NAME/$APP_NAME.exe"

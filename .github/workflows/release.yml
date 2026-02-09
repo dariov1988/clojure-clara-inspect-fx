@@ -1,0 +1,198 @@
+# Release: build JAR and native app images on tag push (e.g. v0.1.0)
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-jar:
+    name: Build JAR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Install Clojure CLI
+        run: |
+          curl -L -O https://github.com/clojure/brew-install/releases/latest/download/linux-install.sh
+          chmod +x linux-install.sh
+          sudo bash linux-install.sh
+
+      - name: Build uberjar
+        run: xvfb-run -a clojure -T:build uber
+
+      - name: Upload JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: uberjar
+          path: target/clara-inspect-fx-standalone.jar
+
+  build-linux:
+    name: Linux AppImage
+    needs: build-jar
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Download JAR
+        uses: actions/download-artifact@v4
+        with:
+          name: uberjar
+
+      - name: Place JAR in target
+        run: |
+          mkdir -p target
+          mv clara-inspect-fx-standalone.jar target/
+
+      - name: Install appimagetool (extract without FUSE)
+        run: |
+          sudo apt-get update && sudo apt-get install -y squashfs-tools
+          curl -sL -o appimagetool.AppImage \
+            "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
+          chmod +x appimagetool.AppImage
+          # Get offset: --appimage-offset often works without FUSE; else use last "hsqs" (squashfs at end of type 2)
+          OFFSET=$(./appimagetool.AppImage --appimage-offset 2>/dev/null) || true
+          if [ -z "$OFFSET" ] || [ "$OFFSET" -lt 1000 ]; then
+            OFFSET=$(python3 -c "
+          with open('appimagetool.AppImage', 'rb') as f:
+              data = f.read()
+          # Squashfs is usually at the end of type 2 AppImage; use last occurrence of magic
+          idx = data.rfind(b'hsqs')
+          if idx == -1:
+              raise SystemExit('squashfs magic not found')
+          print(idx)
+          ")
+          fi
+          dd if=appimagetool.AppImage of=appimagetool.squashfs bs=1 skip="$OFFSET" 2>/dev/null
+          unsquashfs -f -d squashfs-root appimagetool.squashfs
+          sudo mv squashfs-root /opt/appimagetool.AppDir
+          sudo ln -sf /opt/appimagetool.AppDir/AppRun /usr/local/bin/appimagetool
+
+      - name: Build AppImage
+        run: ARCH=x86_64 xvfb-run -a ./scripts/build-appimage.sh
+
+      - name: Upload AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-AppImage
+          path: dist/Clara-Inspect-Fx-x86_64.AppImage
+
+  build-windows:
+    name: Windows
+    needs: build-jar
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17 (Liberica with JavaFX)
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "liberica"
+          java-package: "jdk+fx"
+
+      - name: Download JAR
+        uses: actions/download-artifact@v4
+        with:
+          name: uberjar
+
+      - name: Place JAR in target
+        run: |
+          New-Item -ItemType Directory -Force -Path target
+          Move-Item -Path clara-inspect-fx-standalone.jar -Destination target/
+
+      - name: Build Windows app
+        shell: bash
+        run: ./scripts/build-windows.sh
+
+      - name: Ensure Windows ZIP exists (zip may not be in PATH on runner)
+        shell: pwsh
+        run: |
+          if (-not (Test-Path dist/Clara-Inspect-Fx-windows-x86_64.zip)) {
+            Compress-Archive -Path dist/Clara-Inspect-Fx -DestinationPath dist/Clara-Inspect-Fx-windows-x86_64.zip -Force
+          }
+
+      - name: Upload Windows ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-zip
+          path: dist/Clara-Inspect-Fx-windows-x86_64.zip
+
+  build-macos:
+    name: macOS
+    needs: build-jar
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17 (Liberica with JavaFX)
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "liberica"
+          java-package: "jdk+fx"
+
+      - name: Download JAR
+        uses: actions/download-artifact@v4
+        with:
+          name: uberjar
+
+      - name: Place JAR in target
+        run: |
+          mkdir -p target
+          mv clara-inspect-fx-standalone.jar target/
+
+      - name: Build macOS app and DMG
+        run: ./scripts/build-mac.sh --dmg
+
+      - name: Upload macOS DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: dist/Clara-Inspect-Fx-macos-*.dmg
+
+  release:
+    name: Create Release
+    needs: [build-jar, build-linux, build-windows, build-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Normalize macOS DMG name for release
+        run: |
+          MACOS_DMG=$(ls artifacts/Clara-Inspect-Fx-macos-*.dmg 2>/dev/null | head -1)
+          if [ -n "$MACOS_DMG" ]; then
+            cp "$MACOS_DMG" artifacts/Clara-Inspect-Fx-macos.dmg
+          fi
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            artifacts/clara-inspect-fx-standalone.jar
+            artifacts/Clara-Inspect-Fx-x86_64.AppImage
+            artifacts/Clara-Inspect-Fx-windows-x86_64.zip
+            artifacts/Clara-Inspect-Fx-macos.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

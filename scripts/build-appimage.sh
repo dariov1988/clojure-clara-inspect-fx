@@ -19,10 +19,11 @@ for a in "$@"; do [ "$a" = "--bundle-jre" ] && BUNDLE_JRE=true; done
 
 cd "$PROJECT_ROOT"
 
-echo "== Building uberjar =="
-clj -T:build uber
-
 JAR_PATH="$PROJECT_ROOT/target/$JAR_NAME"
+if [ ! -f "$JAR_PATH" ]; then
+  echo "== Building uberjar =="
+  clojure -T:build uber
+fi
 test -f "$JAR_PATH" || { echo "Uberjar not found: $JAR_PATH"; exit 1; }
 
 echo "== Preparing AppDir =="
@@ -39,7 +40,7 @@ if [ "$BUNDLE_JRE" = true ] && command -v jpackage &>/dev/null; then
     --main-jar "$JAR_NAME" \
     --main-class clara_inspect_fx.main \
     --dest "$DIST_DIR" \
-    --app-version 0.1.0
+    --app-version 1.0.0
   # Wrap jpackage output in AppDir: move app into usr/
   mv "$JPACKAGE_APP" "$APPDIR/usr/"
   # AppRun delegates to jpackage launcher

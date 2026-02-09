@@ -9,7 +9,7 @@ TARGET := target
 
 .PHONY: help run repl deps uberjar clean \
 	dist-linux dist-linux-bundle dist-windows dist-mac dist-mac-dmg \
-	dist-all lint
+	dist-all dist-linux-ci lint
 
 help:
 	@echo "Clara Rules Inspector — targets:"
@@ -19,6 +19,7 @@ help:
 	@echo "  uberjar          Build standalone JAR (target/clara-inspect-fx-standalone.jar)"
 	@echo "  clean            Remove target/ and dist/"
 	@echo "  dist-linux       Linux AppImage (uses system Java; run on Linux)"
+	@echo "  dist-linux-ci     Same as dist-linux with ARCH=x86_64 (matches GitHub Actions)"
 	@echo "  dist-linux-bundle Linux AppImage with bundled JRE (jpackage + appimagetool)"
 	@echo "  dist-windows     Windows app-image + optional ZIP (run on Windows / Git Bash)"
 	@echo "  dist-mac         macOS .app bundle (run on macOS)"
@@ -44,6 +45,9 @@ clean:
 
 dist-linux:
 	$(SCRIPTS)/build-appimage.sh
+
+dist-linux-ci:
+	ARCH=x86_64 $(SCRIPTS)/build-appimage.sh
 
 dist-linux-bundle:
 	$(SCRIPTS)/build-appimage.sh --bundle-jre

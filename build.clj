@@ -2,7 +2,7 @@
   (:require [clojure.tools.build.api :as b]))
 
 (def lib 'clara-inspect-fx/clara-inspect-fx)
-(def version "0.1.0")
+(def version "1.0.0")
 (def class-dir "target/classes")
 (def uber-file "target/clara-inspect-fx-standalone.jar")
 

@@ -70,6 +70,14 @@ Optional: add `resources/clara_inspect_fx/icon.png` (256×256) for the app icon 
 - File: `log/clara-inspect.log` (created on first run)
 - Key steps (parse, session, insert, fire, inspect-facts, errors) are logged and also shown in the **Execution trace** tab.
 
+## CI / CD (GitHub Actions)
+
+- **CI** (`.github/workflows/ci.yml`): On every push and PR to `main`/`master` — runs **clj-kondo** lint and builds the **uberjar**.
+- **Dependency review** (`.github/workflows/dependency-review.yml`): On PRs — checks dependency changes for known vulnerabilities (fail on high severity).
+- **Release** (`.github/workflows/release.yml`): On **tag push** `v*` (e.g. `v0.1.0`) — builds the JAR, Linux AppImage, Windows app (ZIP), and macOS app (DMG), then creates a GitHub Release with all artifacts.
+
+To cut a release: `git tag v0.1.0 && git push origin v0.1.0`.
+
 ## License
 
 MIT License.
